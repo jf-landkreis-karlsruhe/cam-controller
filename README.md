@@ -21,3 +21,8 @@ Beispiel: http://192.168.1.71/web/cgi-bin/hi3510/snap.cgi?&-getstream&-snapone&-
 
 ### CamFtpUploader
 This program uploads images to an FTP server.
+
+#### Resize Image on Upload
+
+If the textbox `Image Upload width:` is >0, a copy of the image is created which is resized to the configured width.
+The copy is created in the subfolder `resize` and is used for the upload process.
