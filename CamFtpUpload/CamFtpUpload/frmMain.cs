@@ -27,6 +27,7 @@ namespace CamFtpUpload
         public frmMain()
         {
             InitializeComponent();
+            tipUploadImageWidth.SetToolTip(labelUploadImageWidth, "Set to 0 to disable");
             isRunning = false;
             uploadTimer.Interval = Convert.ToInt32(numericUpDown1.Value * 60 * 1000);            
         }
@@ -44,6 +45,7 @@ namespace CamFtpUpload
                 txtRemoteFile2.Enabled = true;
                 txtUserName.Enabled = true;
                 txtPassword.Enabled = true;
+                txtImageUploadWidth.Enabled = true;
 
                 uploadTimer.Enabled = false;
                 isRunning = false;
@@ -68,6 +70,7 @@ namespace CamFtpUpload
                 txtRemoteFile2.Enabled = false;
                 txtUserName.Enabled = false;
                 txtPassword.Enabled = false;
+                txtImageUploadWidth.Enabled = false;
 
                 uploadTimer.Enabled = true;
                 isRunning = true;
@@ -80,6 +83,26 @@ namespace CamFtpUpload
             }
         }
 
+        private void ResizeJpeg(string inputPath, string outputPath, int newWidth)
+        {
+            using (var srcImage = Image.FromFile(inputPath))
+            {
+                int originalWidth = srcImage.Width;
+                int originalHeight = srcImage.Height;
+
+                int newHeight = (int)(originalHeight * (newWidth / (double)originalWidth));
+
+                using (var newImage = new Bitmap(newWidth, newHeight))
+                using (var graphics = Graphics.FromImage(newImage))
+                {
+                    graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                    graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                    graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                    graphics.DrawImage(srcImage, 0, 0, newWidth, newHeight);
+                    newImage.Save(outputPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+                }
+            }
+        }
 
         private bool StartFtp()
         {
@@ -146,25 +169,58 @@ namespace CamFtpUpload
 
             successFlag = false;
 
+            string FileToUpload = "";
+            int newImageSize = int.Parse(txtImageUploadWidth.Text);
+
             try
             {
                 startTime = DateTime.Now;
                 if (GetNewestFileInDir(localDir1, out newestFile1))
                 {
+                    if (newImageSize > 0)
+                    {
+                        string resizedDir1 = Path.Combine(localDir1, "resized");
+                        if (!Directory.Exists(resizedDir1))
+                            Directory.CreateDirectory(resizedDir1);
+
+                        FileToUpload = Path.Combine(resizedDir1, newestFile1.Name);
+
+                        ResizeJpeg(newestFile1.FullName, FileToUpload, newImageSize);
+                    }
+                    else
+                    {
+                        FileToUpload = newestFile1.FullName;
+                    }
+
                     lblDuration1.Text = (DateTime.Now - startTime).TotalSeconds.ToString();
-                    ftpClient.UploadFile(remoteDir, remoteFile1, newestFile1);
+                    ftpClient.UploadFile(remoteDir, remoteFile1, new FileInfo(FileToUpload));
                 }
 
                 startTime = DateTime.Now;
                 if (GetNewestFileInDir(localDir2, out newestFile2))
                 {
+                    if (newImageSize > 0)
+                    {
+                        string resizedDir2 = Path.Combine(localDir2, "resized");
+                        if (!Directory.Exists(resizedDir2))
+                            Directory.CreateDirectory(resizedDir2);
+
+                        FileToUpload = Path.Combine(resizedDir2, newestFile2.Name);
+
+                        ResizeJpeg(newestFile2.FullName, FileToUpload, newImageSize);
+                    }
+                    else
+                    {
+                        FileToUpload = newestFile1.FullName;
+                    }
+
                     lblDuration2.Text = (DateTime.Now - startTime).TotalSeconds.ToString();
-                    ftpClient.UploadFile(remoteDir, remoteFile2, newestFile2);
+                    ftpClient.UploadFile(remoteDir, remoteFile2, new FileInfo(FileToUpload));
                 }
-                                              
+
                 successFlag = true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 lblError.Text = ex.Message;
                 successFlag = false;
@@ -215,6 +271,16 @@ namespace CamFtpUpload
         }
 
         private void frmMain_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label13_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tipUploadImageWidth_Popup(object sender, PopupEventArgs e)
         {
 
         }
